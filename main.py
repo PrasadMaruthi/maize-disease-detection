@@ -394,24 +394,7 @@ st.sidebar.caption(
 
 if page == "🏠 Home":
 
-    st.markdown("""
-    <div class="hero">
-
-        <h1>🌽 Maize Disease Recognition System</h1>
-
-        <p>
-        An artificial intelligence-assisted platform for
-        image-based identification of major maize diseases.
-        </p>
-
-        <p style="font-size:15px; margin-top:15px;">
-        University of Agricultural Sciences, Bangalore
-        </p>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-
+    
     # --------------------------------------------------------
     # Optional UAS Logo
     # --------------------------------------------------------
