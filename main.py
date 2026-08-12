@@ -1,17 +1,16 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-from PIL import Image
 import pandas as pd
 import plotly.express as px
-
+from PIL import Image
 
 # ============================================================
 # PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
-    page_title="Maize Disease AI | UAS Bangalore",
+    page_title="Maize Disease Recognition | UAS Bangalore",
     page_icon="🌽",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -25,280 +24,151 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-    /* ---------- MAIN BACKGROUND ---------- */
-
+    /* Main background */
     .stApp {
-        background:
-        linear-gradient(
+        background-color: #f7faf7;
+    }
+
+    /* Main content */
+    .main {
+        padding-top: 1rem;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(
             180deg,
-            #f7fbf5 0%,
-            #ffffff 45%,
-            #f4f9f2 100%
+            #0b4d2c 0%,
+            #063b22 100%
         );
     }
 
-
-    /* ---------- SIDEBAR ---------- */
-
-    [data-testid="stSidebar"] {
-        background:
-        linear-gradient(
-            180deg,
-            #123d27 0%,
-            #1d5b37 55%,
-            #0f3321 100%
-        );
-    }
-
-    [data-testid="stSidebar"] * {
+    section[data-testid="stSidebar"] * {
         color: white !important;
     }
 
-
-    /* ---------- HEADINGS ---------- */
-
-    h1 {
-        color: #123d27;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-    }
-
-    h2 {
-        color: #174c2e;
-        font-weight: 750;
-    }
-
-    h3 {
-        color: #24623c;
+    /* Sidebar title */
+    .sidebar-title {
+        text-align: center;
+        font-size: 25px;
         font-weight: 700;
+        margin-bottom: 5px;
     }
 
+    .sidebar-subtitle {
+        text-align: center;
+        font-size: 13px;
+        opacity: 0.85;
+        margin-bottom: 20px;
+    }
 
-    /* ---------- HERO ---------- */
-
+    /* Hero */
     .hero {
-        padding: 45px 40px;
-        border-radius: 24px;
-
-        background:
-        linear-gradient(
+        background: linear-gradient(
             135deg,
-            rgba(18,61,39,0.96),
-            rgba(39,104,60,0.88)
+            #0b5d32 0%,
+            #178447 50%,
+            #2c9c55 100%
         );
-
+        padding: 35px;
+        border-radius: 20px;
         color: white;
-
-        box-shadow:
-        0 15px 35px rgba(0,0,0,0.12);
-
-        margin-bottom: 30px;
+        margin-bottom: 25px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
     }
 
     .hero h1 {
-        color: white;
-        font-size: 46px;
-        margin-bottom: 10px;
+        font-size: 42px;
+        font-weight: 800;
+        margin-bottom: 8px;
     }
 
     .hero p {
-        font-size: 19px;
-        line-height: 1.7;
-        color: #eef8ef;
-    }
-
-
-    /* ---------- UAS HEADER ---------- */
-
-    .uas-header {
-        background: white;
-        padding: 15px 25px;
-        border-radius: 15px;
-
-        box-shadow:
-        0 4px 18px rgba(0,0,0,0.08);
-
-        margin-bottom: 25px;
-
-        border-left:
-        6px solid #1d6b3b;
-    }
-
-    .uas-title {
-        font-size: 23px;
-        font-weight: 800;
-        color: #174c2e;
-    }
-
-    .uas-subtitle {
-        font-size: 14px;
-        color: #65746b;
-    }
-
-
-    /* ---------- CARDS ---------- */
-
-    .feature-card {
-        background: white;
-
-        padding: 28px 24px;
-
-        border-radius: 18px;
-
-        min-height: 190px;
-
-        box-shadow:
-        0 8px 25px rgba(0,0,0,0.07);
-
-        border-top:
-        4px solid #3b8f52;
-
-        transition: 0.25s;
-    }
-
-    .feature-card:hover {
-        transform: translateY(-4px);
-
-        box-shadow:
-        0 14px 30px rgba(0,0,0,0.12);
-    }
-
-    .feature-icon {
-        font-size: 38px;
-    }
-
-    .feature-title {
-        font-size: 20px;
-        font-weight: 750;
-        color: #174c2e;
-        margin-top: 10px;
-    }
-
-    .feature-text {
-        color: #65746b;
+        font-size: 18px;
         line-height: 1.6;
+        margin-bottom: 0;
     }
 
+    /* Cards */
+    .info-card {
+        background: white;
+        padding: 22px;
+        border-radius: 16px;
+        border: 1px solid #e2e8e2;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        margin-bottom: 18px;
+    }
 
-    /* ---------- RESULT CARD ---------- */
+    .info-card h3 {
+        color: #0b5d32;
+        margin-top: 0;
+    }
 
+    /* Disease card */
+    .disease-card {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        border-left: 5px solid #168345;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+        margin-bottom: 15px;
+    }
+
+    .disease-card h3 {
+        color: #0b5d32;
+        margin-top: 0;
+    }
+
+    /* Result */
     .prediction-card {
-        background:
-        linear-gradient(
+        background: linear-gradient(
             135deg,
-            #edf8ef,
+            #e8f7ed,
             #ffffff
         );
-
-        padding: 30px;
-
-        border-radius: 20px;
-
-        border:
-        1px solid #cfe4d3;
-
-        box-shadow:
-        0 10px 30px rgba(0,0,0,0.08);
+        padding: 28px;
+        border-radius: 18px;
+        border: 2px solid #a7d8b6;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        text-align: center;
+        margin-top: 20px;
     }
 
     .prediction-label {
-        color: #66806e;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        font-size: 16px;
+        color: #4b6354;
+        margin-bottom: 8px;
     }
 
     .prediction-name {
-        color: #174c2e;
-        font-size: 31px;
+        font-size: 32px;
         font-weight: 800;
+        color: #087432;
     }
 
-    .confidence {
-        color: #277442;
-        font-size: 21px;
-        font-weight: 700;
+    /* Section title */
+    .section-title {
+        color: #0b5d32;
+        font-weight: 750;
+        font-size: 28px;
+        margin-top: 15px;
+        margin-bottom: 15px;
     }
 
-
-    /* ---------- INFO BOX ---------- */
-
-    .info-box {
-        background: #f1f8f3;
-
-        padding: 22px;
-
-        border-radius: 15px;
-
-        border-left:
-        5px solid #32834b;
-
-        margin: 15px 0;
-    }
-
-
-    /* ---------- FOOTER ---------- */
-
+    /* Footer */
     .footer {
         text-align: center;
-
-        padding: 30px;
-
-        margin-top: 50px;
-
-        color: #6b776f;
-
-        border-top:
-        1px solid #dce8df;
+        padding: 25px 10px;
+        margin-top: 40px;
+        border-top: 1px solid #dce6de;
+        color: #64756a;
+        font-size: 13px;
     }
 
-
-    /* ---------- BUTTON ---------- */
-
+    /* Buttons */
     .stButton > button {
-        border-radius: 12px;
-
-        border: none;
-
-        background:
-        linear-gradient(
-            90deg,
-            #1d6339,
-            #32884d
-        );
-
-        color: white;
-
-        font-weight: 700;
-
-        padding: 10px 25px;
-
-        min-height: 48px;
-    }
-
-    .stButton > button:hover {
-        background:
-        linear-gradient(
-            90deg,
-            #154b2c,
-            #276d3f
-        );
-
-        color: white;
-    }
-
-
-    /* ---------- FILE UPLOADER ---------- */
-
-    [data-testid="stFileUploader"] {
-        background: white;
-
-        padding: 15px;
-
-        border-radius: 15px;
-
-        border:
-        2px dashed #9bc4a4;
+        border-radius: 10px;
+        font-weight: 600;
     }
 
 </style>
@@ -306,119 +176,190 @@ st.markdown("""
 
 
 # ============================================================
-# CONFIGURATION
+# MODEL SETTINGS
 # ============================================================
 
 MODEL_PATH = "best_model.keras"
 
-# Change this after your maize model is trained.
+IMAGE_SIZE = (224, 224)
+
+# IMPORTANT:
+# This order MUST match the class-index order used during training.
 CLASS_NAMES = [
-    "Maize Disease 1",
-    "Maize Disease 2",
-    "Maize Disease 3",
-    "Maize Disease 4",
-    "Maize Disease 5",
-    "Maize Disease 6",
-    "Maize Disease 7",
-    "Maize Disease 8"
+    "Common Rust",
+    "Fusarium Stalk Rot",
+    "Healthy Maize",
+    "Maize Downy Mildew",
+    "Southern Corn Blight",
+    "Turcicum Leaf Blight"
 ]
 
 
 # ============================================================
-# UAS HEADER
+# DISEASE INFORMATION
 # ============================================================
 
-st.markdown("""
-<div class="uas-header">
+DISEASE_INFO = {
 
-    <div class="uas-title">
-        🌱 UNIVERSITY OF AGRICULTURAL SCIENCES, BANGALORE
-    </div>
+    "Common Rust": {
+        "emoji": "🟤",
+        "description":
+            "A foliar disease characterized by rust-coloured pustules "
+            "on maize leaves. Severe infections can reduce photosynthetic "
+            "activity and plant productivity.",
+        "management": [
+            "Use resistant or tolerant maize hybrids where available.",
+            "Monitor fields regularly for early symptoms.",
+            "Maintain appropriate plant density and crop aeration.",
+            "Manage infected crop residues appropriately.",
+            "Use recommended fungicides when disease pressure warrants chemical control."
+        ]
+    },
 
-    <div class="uas-subtitle">
-        GKVK • Bengaluru • Karnataka, India
-        &nbsp; | &nbsp;
-        Artificial Intelligence in Agriculture
-    </div>
+    "Fusarium Stalk Rot": {
+        "emoji": "🟠",
+        "description":
+            "A stalk disease that can weaken maize plants and may lead "
+            "to stalk lodging, particularly when plants are under stress.",
+        "management": [
+            "Use resistant or tolerant hybrids where available.",
+            "Maintain balanced plant nutrition.",
+            "Avoid excessive nitrogen application.",
+            "Minimize drought and other environmental stresses.",
+            "Manage insect damage that can provide infection sites.",
+            "Remove or properly manage infected crop residues."
+        ]
+    },
 
-</div>
-""", unsafe_allow_html=True)
+    "Healthy Maize": {
+        "emoji": "🌱",
+        "description":
+            "The image does not show prominent visual symptoms corresponding "
+            "to the disease classes included in the present classification system.",
+        "management": [
+            "Use quality and disease-free seed.",
+            "Maintain balanced crop nutrition.",
+            "Ensure proper irrigation and drainage.",
+            "Monitor the crop regularly for disease symptoms.",
+            "Maintain good field sanitation.",
+            "Follow recommended integrated crop management practices."
+        ]
+    },
+
+    "Maize Downy Mildew": {
+        "emoji": "🟡",
+        "description":
+            "A disease affecting maize foliage that can cause characteristic "
+            "leaf symptoms and may reduce plant growth and productivity.",
+        "management": [
+            "Use certified, disease-free seed.",
+            "Prefer resistant or tolerant hybrids.",
+            "Avoid continuous maize cultivation where practical.",
+            "Maintain appropriate field drainage.",
+            "Remove severely infected plants where recommended.",
+            "Follow locally recommended seed-treatment practices."
+        ]
+    },
+
+    "Southern Corn Blight": {
+        "emoji": "🔴",
+        "description":
+            "A foliar disease capable of producing characteristic leaf "
+            "lesions and reducing effective photosynthetic area.",
+        "management": [
+            "Use resistant or tolerant maize hybrids.",
+            "Practice crop rotation with suitable non-host crops.",
+            "Manage infected crop residues.",
+            "Maintain balanced plant nutrition.",
+            "Avoid excessive crop density where possible.",
+            "Use recommended fungicides when economically justified."
+        ]
+    },
+
+    "Turcicum Leaf Blight": {
+        "emoji": "🟣",
+        "description":
+            "A foliar blight of maize associated with elongated leaf lesions. "
+            "Severe disease can reduce green leaf area and crop productivity.",
+        "management": [
+            "Use resistant or tolerant hybrids.",
+            "Practice crop rotation.",
+            "Manage infected crop residues.",
+            "Maintain balanced fertilization.",
+            "Regularly inspect lower leaves for early symptoms.",
+            "Apply recommended fungicides when disease pressure is high."
+        ]
+    }
+}
 
 
 # ============================================================
-# MODEL
+# LOAD MODEL
 # ============================================================
 
 @st.cache_resource
 def load_model():
 
-    return tf.keras.models.load_model(
-        MODEL_PATH
-    )
+    model = tf.keras.models.load_model(MODEL_PATH)
+
+    return model
 
 
 # ============================================================
-# PREDICTION
+# MODEL PREDICTION
 # ============================================================
 
-def predict_disease(uploaded_file):
+def model_prediction(test_image):
 
     model = load_model()
 
-    image = Image.open(
-        uploaded_file
-    ).convert("RGB")
+    image = Image.open(test_image).convert("RGB")
 
-    image = image.resize(
-        (224, 224)
-    )
+    image = image.resize(IMAGE_SIZE)
 
-    image_array = np.asarray(
-        image,
-        dtype=np.float32
-    )
+    input_arr = np.asarray(image).astype(np.float32)
 
-    image_array = np.expand_dims(
-        image_array,
-        axis=0
-    )
+    # Convert single image to batch
+    input_arr = np.expand_dims(input_arr, axis=0)
 
     prediction = model.predict(
-        image_array,
+        input_arr,
         verbose=0
-    )[0]
-
-    index = int(
-        np.argmax(prediction)
     )
 
-    confidence = float(
-        prediction[index] * 100
-    )
+    # Handle models with softmax output
+    probabilities = prediction[0]
 
-    return (
-        index,
-        confidence,
-        prediction
-    )
+    # If output is not normalized, apply softmax
+    if not np.isclose(np.sum(probabilities), 1.0, atol=0.01):
+        probabilities = tf.nn.softmax(probabilities).numpy()
+
+    result_index = int(np.argmax(probabilities))
+
+    confidence = float(probabilities[result_index]) * 100
+
+    return result_index, probabilities, confidence
 
 
 # ============================================================
 # SIDEBAR
 # ============================================================
 
-st.sidebar.markdown(
-    "## 🌽 Maize Disease AI"
-)
+st.sidebar.markdown("""
+<div class="sidebar-title">
+🌽 Maize AI
+</div>
 
-st.sidebar.markdown(
-    "### UAS Bangalore"
-)
+<div class="sidebar-subtitle">
+Disease Recognition System<br>
+UAS Bangalore
+</div>
+""", unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
-    "Navigate",
+    "Navigation",
     [
         "🏠 Home",
         "🔬 Disease Recognition",
@@ -429,17 +370,26 @@ page = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 
-st.sidebar.caption(
-    "AI-assisted maize disease recognition"
-)
+st.sidebar.markdown("""
+### 🌽 Supported Classes
+
+✓ Common Rust  
+✓ Fusarium Stalk Rot  
+✓ Healthy Maize  
+✓ Maize Downy Mildew  
+✓ Southern Corn Blight  
+✓ Turcicum Leaf Blight
+""")
+
+st.sidebar.markdown("---")
 
 st.sidebar.caption(
-    "Research-oriented agricultural application"
+    "AI-assisted maize disease recognition research platform"
 )
 
 
 # ============================================================
-# HOME
+# HOME PAGE
 # ============================================================
 
 if page == "🏠 Home":
@@ -447,17 +397,15 @@ if page == "🏠 Home":
     st.markdown("""
     <div class="hero">
 
-        <h1>🌽 Maize Disease Recognition</h1>
+        <h1>🌽 Maize Disease Recognition System</h1>
 
         <p>
-        An AI-powered image analysis platform developed
-        for rapid and accessible recognition of maize
-        diseases from plant images.
+        An artificial intelligence-assisted platform for
+        image-based identification of major maize diseases.
         </p>
 
-        <p>
-        Developed in the academic and research environment
-        of the University of Agricultural Sciences, Bangalore.
+        <p style="font-size:15px; margin-top:15px;">
+        University of Agricultural Sciences, Bangalore
         </p>
 
     </div>
@@ -465,178 +413,204 @@ if page == "🏠 Home":
 
 
     # --------------------------------------------------------
-    # HERO IMAGE
+    # Optional UAS Logo
     # --------------------------------------------------------
 
-    try:
+    col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 
-        st.image(
-            "maize_field.jpg",
-            use_container_width=True
-        )
+    with col_logo2:
 
-    except:
+        try:
 
-        st.info(
-            "Add a high-quality maize field image "
-            "as 'maize_field.jpg'."
-        )
+            st.image(
+                "uas_logo.png",
+                width=180
+            )
+
+        except:
+
+            pass
 
 
     st.markdown(
-        "## 🌱 Intelligent Plant Disease Detection"
+        '<div class="section-title">🌱 About the System</div>',
+        unsafe_allow_html=True
     )
 
-    st.write(
-        """
-        The system uses deep learning-based image
-        classification to identify disease-associated
-        visual patterns in maize plant images.
-        """
-    )
+    st.markdown("""
+    <div class="info-card">
+
+    The <b>Maize Disease Recognition System</b> is an AI-assisted
+    research platform designed to support rapid preliminary
+    identification of maize diseases from plant images.
+
+    The system uses a trained deep learning image-classification
+    model to recognize visual patterns associated with different
+    disease categories.
+
+    </div>
+    """, unsafe_allow_html=True)
 
 
     # --------------------------------------------------------
-    # FEATURES
+    # How it works
     # --------------------------------------------------------
 
-    c1, c2, c3 = st.columns(3)
+    st.markdown(
+        '<div class="section-title">🔍 How It Works</div>',
+        unsafe_allow_html=True
+    )
 
-    with c1:
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
 
         st.markdown("""
-        <div class="feature-card">
+        <div class="info-card">
 
-            <div class="feature-icon">
-                🧠
-            </div>
+        <h3>📤 1. Upload</h3>
 
-            <div class="feature-title">
-                AI-Powered
-            </div>
-
-            <div class="feature-text">
-                Deep learning-based image classification
-                for automated maize disease recognition.
-            </div>
+        Upload a clear image of a maize leaf or plant showing
+        disease symptoms.
 
         </div>
         """, unsafe_allow_html=True)
 
 
-    with c2:
+    with col2:
 
         st.markdown("""
-        <div class="feature-card">
+        <div class="info-card">
 
-            <div class="feature-icon">
-                ⚡
-            </div>
+        <h3>🧠 2. AI Analysis</h3>
 
-            <div class="feature-title">
-                Rapid Analysis
-            </div>
-
-            <div class="feature-text">
-                Upload a maize image and obtain a prediction
-                within seconds.
-            </div>
+        The deep learning model analyzes visual features
+        present in the uploaded image.
 
         </div>
         """, unsafe_allow_html=True)
 
 
-    with c3:
+    with col3:
 
         st.markdown("""
-        <div class="feature-card">
+        <div class="info-card">
 
-            <div class="feature-icon">
-                🔬
-            </div>
+        <h3>📊 3. Prediction</h3>
 
-            <div class="feature-title">
-                Research Based
-            </div>
-
-            <div class="feature-text">
-                Designed as an agricultural research and
-                decision-support platform.
-            </div>
+        The system displays the predicted class and model
+        confidence together with probability scores.
 
         </div>
         """, unsafe_allow_html=True)
 
 
-    st.markdown("---")
+    # --------------------------------------------------------
+    # Supported diseases
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">🌽 Supported Maize Classes</div>',
+        unsafe_allow_html=True
+    )
+
+    cols = st.columns(3)
+
+    for i, disease in enumerate(CLASS_NAMES):
+
+        with cols[i % 3]:
+
+            info = DISEASE_INFO[disease]
+
+            st.markdown(f"""
+            <div class="disease-card">
+
+            <h3>
+            {info["emoji"]} {disease}
+            </h3>
+
+            <p>
+            {info["description"]}
+            </p>
+
+            </div>
+            """, unsafe_allow_html=True)
 
 
-    st.markdown("## 🔍 How it works")
+    # --------------------------------------------------------
+    # Features
+    # --------------------------------------------------------
 
-    c1, c2, c3 = st.columns(3)
+    st.markdown(
+        '<div class="section-title">⭐ Key Features</div>',
+        unsafe_allow_html=True
+    )
 
-    with c1:
-        st.markdown("### 01 · Upload")
-        st.write(
-            "Upload a clear maize leaf or plant image."
-        )
+    st.markdown("""
+    <div class="info-card">
 
-    with c2:
-        st.markdown("### 02 · Analyze")
-        st.write(
-            "The trained deep learning model analyzes "
-            "visual disease patterns."
-        )
+    ✓ Image-based disease classification  
+    ✓ Six maize disease/health categories  
+    ✓ Rapid prediction  
+    ✓ Model confidence estimation  
+    ✓ Class probability visualization  
+    ✓ User-friendly interface  
+    ✓ Research-oriented platform  
+    ✓ Designed for agricultural applications  
 
-    with c3:
-        st.markdown("### 03 · Predict")
-        st.write(
-            "Receive the predicted disease and confidence."
-        )
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.info(
+        "💡 Use the 'Disease Recognition' page from the sidebar "
+        "to upload an image and obtain a model prediction."
+    )
 
 
 # ============================================================
-# DISEASE RECOGNITION
+# DISEASE RECOGNITION PAGE
 # ============================================================
 
 elif page == "🔬 Disease Recognition":
 
-    st.header(
-        "🔬 Maize Disease Recognition"
+    st.markdown(
+        '<div class="section-title">🔬 Maize Disease Recognition</div>',
+        unsafe_allow_html=True
     )
 
     st.write(
-        """
-        Upload a maize plant image for AI-assisted
-        disease classification.
-        """
+        "Upload a maize plant image for AI-assisted disease classification."
+    )
+
+    st.markdown("---")
+
+
+    # --------------------------------------------------------
+    # Upload
+    # --------------------------------------------------------
+
+    test_image = st.file_uploader(
+        "📤 Upload Maize Image",
+        type=["jpg", "jpeg", "png"],
+        help="Upload a clear image of a maize leaf or plant."
     )
 
 
-    uploaded_file = st.file_uploader(
-        "📤 Upload maize image",
-        type=[
-            "jpg",
-            "jpeg",
-            "png"
-        ],
-        help="Upload a clear image showing the maize plant or leaf."
-    )
+    if test_image is not None:
 
+        # ----------------------------------------------------
+        # Image and prediction columns
+        # ----------------------------------------------------
 
-    if uploaded_file is not None:
-
-        image = Image.open(
-            uploaded_file
-        ).convert("RGB")
-
-
-        col1, col2 = st.columns(
-            [1.1, 0.9]
-        )
+        col1, col2 = st.columns([1, 1])
 
 
         with col1:
+
+            st.markdown("### 🖼️ Uploaded Image")
+
+            image = Image.open(test_image)
 
             st.image(
                 image,
@@ -647,68 +621,55 @@ elif page == "🔬 Disease Recognition":
 
         with col2:
 
-            st.markdown("""
-            <div class="info-box">
+            st.markdown("### 🔍 Analysis")
 
-            <b>Image ready for analysis</b>
+            st.write(
+                "Click the button below to analyze the uploaded image."
+            )
 
-            <br><br>
-
-            The image will be processed using
-            the trained maize disease classification model.
-
-            </div>
-            """, unsafe_allow_html=True)
-
-
-            analyze = st.button(
-                "🔍 Analyze Image",
-                use_container_width=True
+            predict_button = st.button(
+                "🧠 Analyze Image",
+                use_container_width=True,
+                type="primary"
             )
 
 
-        if analyze:
+        # ----------------------------------------------------
+        # Prediction
+        # ----------------------------------------------------
+
+        if predict_button:
 
             try:
 
                 with st.spinner(
-                    "🧠 Analyzing maize image..."
+                    "Analyzing the maize image..."
                 ):
 
-                    (
-                        index,
-                        confidence,
-                        probabilities
-                    ) = predict_disease(
-                        uploaded_file
+                    result_index, probabilities, confidence = (
+                        model_prediction(test_image)
                     )
 
 
-                predicted_class = CLASS_NAMES[
-                    index
-                ]
+                predicted_class = CLASS_NAMES[result_index]
+
+                disease_info = DISEASE_INFO[predicted_class]
 
 
-                st.markdown(
-                    "## 📊 Prediction Result"
-                )
-
+                # ------------------------------------------------
+                # Prediction Result
+                # ------------------------------------------------
 
                 st.markdown(f"""
                 <div class="prediction-card">
 
                     <div class="prediction-label">
-                        Most probable disease
+                    🌽 Model Prediction
                     </div>
 
                     <div class="prediction-name">
-                        🌽 {predicted_class}
-                    </div>
-
-                    <br>
-
-                    <div class="confidence">
-                        Confidence: {confidence:.2f}%
+                    {disease_info["emoji"]}
+                    {predicted_class}
                     </div>
 
                 </div>
@@ -716,61 +677,124 @@ elif page == "🔬 Disease Recognition":
 
 
                 # ------------------------------------------------
-                # PROBABILITY CHART
+                # Confidence
                 # ------------------------------------------------
 
-                st.markdown(
-                    "### 📈 Prediction probabilities"
+                st.markdown("### 📈 Prediction Confidence")
+
+                st.progress(
+                    min(confidence / 100, 1.0)
+                )
+
+                st.metric(
+                    "Model confidence",
+                    f"{confidence:.2f}%"
                 )
 
 
+                # ------------------------------------------------
+                # Interpretation
+                # ------------------------------------------------
+
+                if confidence >= 80:
+
+                    st.success(
+                        "High model confidence. The image contains "
+                        "features strongly associated with the predicted class."
+                    )
+
+                elif confidence >= 60:
+
+                    st.warning(
+                        "Moderate model confidence. Consider confirming "
+                        "the prediction through expert field diagnosis."
+                    )
+
+                else:
+
+                    st.warning(
+                        "Low model confidence. The image may contain "
+                        "ambiguous symptoms or conditions outside the "
+                        "training distribution."
+                    )
+
+
+                # ------------------------------------------------
+                # Disease description
+                # ------------------------------------------------
+
+                st.markdown("### 📝 About the Prediction")
+
+                st.info(
+                    disease_info["description"]
+                )
+
+
+                # ------------------------------------------------
+                # Probability chart
+                # ------------------------------------------------
+
+                st.markdown("### 📊 Class Probability Distribution")
+
+
                 probability_df = pd.DataFrame({
+
                     "Disease": CLASS_NAMES,
-                    "Probability":
+
+                    "Probability": (
                         probabilities * 100
+                    )
+
                 })
 
-
-                probability_df = (
-                    probability_df
-                    .sort_values(
-                        "Probability",
-                        ascending=True
-                    )
+                probability_df = probability_df.sort_values(
+                    "Probability",
+                    ascending=True
                 )
 
 
                 fig = px.bar(
+
                     probability_df,
+
                     x="Probability",
+
                     y="Disease",
+
                     orientation="h",
+
                     text="Probability",
+
                     labels={
-                        "Probability":
-                            "Probability (%)",
-                        "Disease":
-                            ""
+                        "Probability": "Probability (%)",
+                        "Disease": ""
                     }
                 )
 
 
                 fig.update_traces(
+
                     texttemplate="%{text:.2f}%",
+
                     textposition="outside"
                 )
 
 
                 fig.update_layout(
+
                     height=430,
+
                     margin=dict(
                         l=10,
-                        r=30,
+                        r=40,
                         t=20,
                         b=20
                     ),
+
                     plot_bgcolor="white",
+
                     paper_bgcolor="white",
+
                     xaxis=dict(
                         range=[
                             0,
@@ -793,11 +817,25 @@ elif page == "🔬 Disease Recognition":
                 )
 
 
+                # ------------------------------------------------
+                # Recommended management
+                # ------------------------------------------------
+
+                st.markdown(
+                    "### 🌱 General Management Considerations"
+                )
+
+                for item in disease_info["management"]:
+
+                    st.markdown(
+                        f"✓ {item}"
+                    )
+
+
                 st.caption(
-                    "Prediction confidence represents "
-                    "the model's output probability and "
-                    "should not be interpreted as definitive "
-                    "field diagnosis."
+                    "Model confidence represents the model's output "
+                    "probability and should not be interpreted as "
+                    "definitive field diagnosis."
                 )
 
 
@@ -818,14 +856,31 @@ elif page == "🔬 Disease Recognition":
 
 
 # ============================================================
-# ABOUT
+# ABOUT PAGE
 # ============================================================
 
 elif page == "📘 About":
 
-    st.header(
-        "📘 About the Project"
+    st.markdown(
+        '<div class="section-title">📘 About the Project</div>',
+        unsafe_allow_html=True
     )
+
+
+    # --------------------------------------------------------
+    # UAS Logo
+    # --------------------------------------------------------
+
+    try:
+
+        st.image(
+            "uas_logo.png",
+            width=180
+        )
+
+    except:
+
+        pass
 
 
     st.markdown("""
@@ -842,49 +897,74 @@ elif page == "📘 About":
     """, unsafe_allow_html=True)
 
 
+    # --------------------------------------------------------
+    # Campus image
+    # --------------------------------------------------------
+
     try:
 
         st.image(
             "uas_campus.jpg",
-            caption="University of Agricultural Sciences, Bangalore – GKVK campus",
+            caption="University of Agricultural Sciences, Bangalore – GKVK Campus",
             use_container_width=True
         )
 
     except:
 
         st.info(
-            "Add the UAS campus image as 'uas_campus.jpg'."
+            "Add the UAS campus image as 'uas_campus.jpg' "
+            "to display it here."
         )
 
 
-    st.markdown(
-        "## 🌽 Project Overview"
-    )
-
-    st.write(
-        """
-        The Maize Disease Recognition System is being
-        developed as an AI-assisted platform for automated
-        identification of maize diseases from plant images.
-
-        The system combines computer vision, deep learning
-        and an interactive web interface to provide rapid
-        image-based disease predictions.
-        """
-    )
-
+    # --------------------------------------------------------
+    # Project overview
+    # --------------------------------------------------------
 
     st.markdown(
-        "## 🎯 Objectives"
+        '<div class="section-title">🌽 Project Overview</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div class="info-card">
+
+    The <b>Maize Disease Recognition System</b> is being developed
+    as an AI-assisted platform for image-based identification of
+    important maize diseases.
+
+    The system combines computer vision, deep learning and an
+    interactive web interface to provide rapid preliminary
+    disease classification from maize plant images.
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Objectives
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">🎯 Objectives</div>',
+        unsafe_allow_html=True
     )
 
     objectives = [
+
         "Develop an automated maize disease recognition system.",
+
         "Apply deep learning for image-based disease classification.",
+
         "Provide a simple interface for researchers and agricultural users.",
+
         "Support rapid preliminary disease identification.",
-        "Explore explainable and interpretable AI for plant disease diagnosis."
+
+        "Explore explainable and interpretable AI for plant disease diagnosis.",
+
+        "Develop a research-oriented platform for future AI-based agricultural applications."
     ]
+
 
     for objective in objectives:
 
@@ -893,103 +973,328 @@ elif page == "📘 About":
         )
 
 
-    st.markdown(
-        "## 🏫 Institutional Background"
-    )
-
-    st.write(
-        """
-        The University of Agricultural Sciences, Bangalore
-        (UAS-B) is a major agricultural education and research
-        institution in Karnataka. The university's GKVK campus
-        provides an important environment for agricultural
-        research, education, extension and technology development.
-        """
-    )
-
+    # --------------------------------------------------------
+    # Dataset
+    # --------------------------------------------------------
 
     st.markdown(
-        "## 👨‍🔬 Development Team"
+        '<div class="section-title">📊 Dataset Information</div>',
+        unsafe_allow_html=True
     )
 
-    st.write(
-        """
-        **Maruthi Prasad B. P.**  
-        Department of Genetics and Plant Breeding  
-        University of Agricultural Sciences, Bangalore
+    st.markdown("""
+    <div class="info-card">
 
-        **Harish J.**  
-        Department of Plant Pathology  
-        University of Agricultural Sciences, Bangalore
+    The current maize image dataset contains six classes:
 
-        **M.K. Prasannakumar**  
-        Department of Plant Pathology  
-        University of Agricultural Sciences, Bangalore
-        """
+    <br><br>
+
+    <b>Common Rust</b><br>
+    <b>Fusarium Stalk Rot</b><br>
+    <b>Healthy Maize</b><br>
+    <b>Maize Downy Mildew</b><br>
+    <b>Southern Corn Blight</b><br>
+    <b>Turcicum Leaf Blight</b>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Dataset numbers
+    # --------------------------------------------------------
+
+    dataset_data = {
+
+        "Class": [
+            "Common Rust",
+            "Fusarium Stalk Rot",
+            "Healthy Maize",
+            "Maize Downy Mildew",
+            "Southern Corn Blight",
+            "Turcicum Leaf Blight"
+        ],
+
+        "Total Images": [
+            303,
+            703,
+            3435,
+            321,
+            1549,
+            8123
+        ]
+    }
+
+
+    dataset_df = pd.DataFrame(dataset_data)
+
+
+    st.dataframe(
+        dataset_df,
+        use_container_width=True,
+        hide_index=True
     )
+
+
+    st.caption(
+        "Dataset counts represent the current image collection "
+        "provided for the six maize classes."
+    )
+
+
+    # --------------------------------------------------------
+    # Institutional background
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">🏫 Institutional Background</div>',
+        unsafe_allow_html=True
+    )
+
+    st.write("""
+    The University of Agricultural Sciences, Bangalore (UAS-B)
+    is an agricultural education and research institution in
+    Karnataka.
+
+    The GKVK campus provides an important environment for
+    agricultural research, education, extension and technology
+    development.
+    """)
+
+
+    # --------------------------------------------------------
+    # Development team
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">👨‍🔬 Development Team</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div class="info-card">
+
+    <b>Maruthi Prasad B. P.</b><br>
+    Department of Genetics and Plant Breeding<br>
+    University of Agricultural Sciences, Bangalore
+
+    <br><br>
+
+    <b>Harish J.</b><br>
+    Department of Plant Pathology<br>
+    University of Agricultural Sciences, Bangalore
+
+    <br><br>
+
+    <b>M. K. Prasannakumar</b><br>
+    Department of Plant Pathology<br>
+    University of Agricultural Sciences, Bangalore
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Disclaimer
+    # --------------------------------------------------------
+
+    st.warning("""
+    ⚠️ **Research and decision-support disclaimer**
+
+    This platform is intended for research, educational and
+    preliminary disease-recognition purposes. AI-based image
+    classification should not replace field diagnosis or
+    expert assessment. Management decisions should consider
+    local disease conditions, crop stage, cultivar and
+    recommendations from qualified agricultural experts.
+    """)
 
 
 # ============================================================
-# MANAGEMENT
+# MANAGEMENT STRATEGIES PAGE
 # ============================================================
 
 elif page == "🌱 Management Strategies":
 
-    st.header(
-        "🌱 Maize Disease Management"
-    )
-
-    st.info(
-        """
-        Management recommendations should be updated
-        according to the final maize diseases included
-        in the trained model and locally validated
-        agricultural recommendations.
-        """
+    st.markdown(
+        '<div class="section-title">🌱 Maize Disease Management Strategies</div>',
+        unsafe_allow_html=True
     )
 
 
-    st.markdown("""
-    ## 🌾 Integrated Disease Management
-
-    ### 1. Resistant Cultivars
-    Use cultivars with resistance or tolerance to
-    locally important maize diseases whenever available.
-
-    ### 2. Healthy Seed
-    Use healthy, high-quality seed and avoid planting
-    visibly infected seed lots.
-
-    ### 3. Field Sanitation
-    Remove or appropriately manage infected plant
-    residues to reduce pathogen carry-over.
-
-    ### 4. Crop Rotation
-    Where appropriate, rotate maize with suitable
-    non-host crops.
-
-    ### 5. Balanced Nutrition
-    Maintain balanced crop nutrition and avoid
-    excessive fertilizer application.
-
-    ### 6. Field Monitoring
-    Regularly inspect plants for early disease symptoms.
-
-    ### 7. Responsible Chemical Management
-    Use plant protection products only when required,
-    following locally approved recommendations and
-    product-label instructions.
+    st.write("""
+    Effective maize disease management requires an integrated
+    approach involving resistant cultivars, healthy seed,
+    field sanitation, balanced nutrition, crop rotation,
+    regular monitoring and timely intervention.
     """)
 
 
-    st.warning(
-        """
-        ⚠️ The AI prediction is intended as a
-        decision-support aid and should not replace
-        confirmation by a qualified plant pathologist
-        or agricultural expert.
-        """
+    st.markdown("---")
+
+
+    # --------------------------------------------------------
+    # Common Rust
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🟤 Common Rust</h3>
+
+    <ul>
+        <li>Use resistant or tolerant maize hybrids where available.</li>
+        <li>Monitor fields regularly for early symptoms.</li>
+        <li>Maintain appropriate plant density and crop aeration.</li>
+        <li>Manage infected crop residues appropriately.</li>
+        <li>Use recommended fungicides when disease pressure warrants chemical control.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Fusarium Stalk Rot
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🟠 Fusarium Stalk Rot</h3>
+
+    <ul>
+        <li>Use resistant or tolerant maize hybrids where available.</li>
+        <li>Maintain balanced plant nutrition.</li>
+        <li>Avoid excessive nitrogen application.</li>
+        <li>Minimize drought and other environmental stresses.</li>
+        <li>Manage insect damage that can provide infection sites.</li>
+        <li>Remove or properly manage infected crop residues.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Healthy maize
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🌱 Healthy Maize</h3>
+
+    <ul>
+        <li>Use quality and disease-free seed.</li>
+        <li>Maintain balanced crop nutrition.</li>
+        <li>Ensure proper irrigation and drainage.</li>
+        <li>Monitor the crop regularly for disease symptoms.</li>
+        <li>Maintain good field sanitation.</li>
+        <li>Follow recommended integrated crop management practices.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Downy Mildew
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🟡 Maize Downy Mildew</h3>
+
+    <ul>
+        <li>Use certified, disease-free seed.</li>
+        <li>Prefer resistant or tolerant hybrids.</li>
+        <li>Avoid continuous maize cultivation where practical.</li>
+        <li>Maintain appropriate field drainage.</li>
+        <li>Remove severely infected plants where recommended.</li>
+        <li>Follow locally recommended seed-treatment practices.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Southern Corn Blight
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🔴 Southern Corn Blight</h3>
+
+    <ul>
+        <li>Use resistant or tolerant maize hybrids.</li>
+        <li>Practice crop rotation with suitable non-host crops.</li>
+        <li>Manage infected crop residues.</li>
+        <li>Maintain balanced plant nutrition.</li>
+        <li>Avoid excessive crop density where possible.</li>
+        <li>Use recommended fungicides when economically justified.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # Turcicum Leaf Blight
+    # --------------------------------------------------------
+
+    st.markdown("""
+    <div class="disease-card">
+
+    <h3>🟣 Turcicum Leaf Blight</h3>
+
+    <ul>
+        <li>Use resistant or tolerant maize hybrids.</li>
+        <li>Practice crop rotation.</li>
+        <li>Manage infected crop residues.</li>
+        <li>Maintain balanced fertilization.</li>
+        <li>Regularly inspect lower leaves for early symptoms.</li>
+        <li>Apply recommended fungicides when disease pressure is high.</li>
+    </ul>
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    # --------------------------------------------------------
+    # General recommendations
+    # --------------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">🌾 General Recommendations</div>',
+        unsafe_allow_html=True
     )
+
+    st.markdown("""
+    <div class="info-card">
+
+    ✓ Use certified and healthy seed<br>
+    ✓ Prefer disease-resistant cultivars<br>
+    ✓ Practice crop rotation<br>
+    ✓ Maintain field sanitation<br>
+    ✓ Maintain balanced fertilization<br>
+    ✓ Avoid unnecessary crop stress<br>
+    ✓ Monitor fields regularly<br>
+    ✓ Identify disease symptoms at an early stage<br>
+    ✓ Use chemical control only when appropriate and according to local recommendations
+
+    </div>
+    """, unsafe_allow_html=True)
+
+
+    st.warning("""
+    ⚠️ Always follow locally approved agricultural recommendations
+    and consult qualified agricultural experts before applying
+    plant-protection products.
+    """)
 
 
 # ============================================================
@@ -999,15 +1304,15 @@ elif page == "🌱 Management Strategies":
 st.markdown("""
 <div class="footer">
 
-    <b>🌽 Maize Disease Recognition System</b>
+🌽 <b>Maize Disease Recognition System</b><br>
 
-    <br>
+Artificial Intelligence-assisted Agricultural Research Platform<br>
 
-    University of Agricultural Sciences, Bangalore
+University of Agricultural Sciences, Bangalore
 
-    <br><br>
+<br><br>
 
-    AI • Agriculture • Plant Health • Research
+© 2026 | Research and Educational Use
 
 </div>
 """, unsafe_allow_html=True)
