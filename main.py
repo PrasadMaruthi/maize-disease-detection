@@ -399,18 +399,20 @@ if page == "🏠 Home":
     # Optional UAS Logo
     # --------------------------------------------------------
 
-    col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+    col_logo1, col_logo2, col_logo3 = st.columns([1, 3, 1])
 
     with col_logo2:
 
         try:
 
-            st.image("uas_logo.png", width=400)
+            st.image(
+                "uas_logo.png",
+                width=180
+            )
 
         except:
 
             pass
-
        
 
 
