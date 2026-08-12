@@ -401,14 +401,9 @@ if page == "🏠 Home":
 
     col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 
-    with col_logo2:
+             st.image(image_path, use_column_width=True)
 
-        try:
-            st.image(image_path, use_column_width=True)
-
-        except:
-
-            pass
+       
 
 
     st.markdown(
