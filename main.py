@@ -401,7 +401,7 @@ if page == "🏠 Home":
 
     col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 
-             st.image(image_path, use_column_width=True)
+    st.image(image_path, use_column_width=True)
 
        
 
