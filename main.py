@@ -404,10 +404,7 @@ if page == "🏠 Home":
     with col_logo2:
 
         try:
-
-            st.image(
-                "coverimage.png"
-            )
+            st.image(image_path, use_column_width=True)
 
         except:
 
