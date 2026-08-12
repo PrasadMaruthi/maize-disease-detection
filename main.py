@@ -406,8 +406,8 @@ if page == "🏠 Home":
         try:
 
             st.image(
-                "uas_logo.png",
-                width=180
+                "coverimage.png",
+                width=400
             )
 
         except:
