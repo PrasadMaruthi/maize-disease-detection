@@ -423,8 +423,7 @@ if page == "🏠 Home":
         try:
 
             st.image(
-                "coverimage.png",
-                width=180
+                "coverimage.png"
             )
 
         except:
