@@ -405,7 +405,7 @@ if page == "🏠 Home":
 
         try:
 
-            st.image("uas_logo.png", use_container_width=True)
+            st.image("uas_logo.png", width=400)
 
         except:
 
