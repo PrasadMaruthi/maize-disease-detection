@@ -423,7 +423,7 @@ if page == "🏠 Home":
         try:
 
             st.image(
-                "uas_logo.png",
+                "coverimage.png",
                 width=180
             )
 
