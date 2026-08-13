@@ -867,18 +867,7 @@ elif page == "📘 About":
         pass
 
 
-    st.markdown("""
-    <div class="hero">
-
-        <h1>University of Agricultural Sciences, Bangalore</h1>
-
-        <p>
-        Artificial intelligence-assisted maize disease
-        recognition research platform.
-        </p>
-
-    </div>
-    """, unsafe_allow_html=True)
+  
 
 
     # --------------------------------------------------------
