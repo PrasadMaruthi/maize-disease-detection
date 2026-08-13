@@ -858,7 +858,7 @@ elif page == "📘 About":
     try:
 
         st.image(
-            "uas_logo.png",
+            "coverimage.png",
             width=180
         )
 
@@ -888,7 +888,7 @@ elif page == "📘 About":
     try:
 
         st.image(
-            "uas_campus.jpg",
+            "complete deployment.png",
             caption="University of Agricultural Sciences, Bangalore – GKVK Campus",
             use_container_width=True
         )
