@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 import tensorflow as tf
 import numpy as np
@@ -179,7 +180,10 @@ st.markdown("""
 # MODEL SETTINGS
 # ============================================================
 
-MODEL_PATH = "best_model.keras"
+# Resolve the model relative to this main.py file so Streamlit Cloud
+# can find it regardless of the working directory.
+BASE_DIR = Path(__file__).resolve().parent
+MODEL_PATH = BASE_DIR / "best_model.keras"
 
 IMAGE_SIZE = (224, 224)
 
