@@ -1,9 +1,11 @@
+from pathlib import Path
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 import pandas as pd
 import plotly.express as px
 from PIL import Image
+from PIL import ImageOps
 
 # ============================================================
 # PAGE CONFIGURATION
@@ -121,29 +123,58 @@ st.markdown("""
 
     /* Result */
     .prediction-card {
-        background: linear-gradient(
-            135deg,
-            #e8f7ed,
-            #ffffff
-        );
-        padding: 28px;
-        border-radius: 18px;
-        border: 2px solid #a7d8b6;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+        background: linear-gradient(145deg, #f4fff7 0%, #ffffff 55%, #eefaf2 100%);
+        padding: 30px 24px 26px;
+        border-radius: 22px;
+        border: 1.5px solid #9ed8af;
+        box-shadow: 0 10px 30px rgba(18, 100, 52, 0.12);
         text-align: center;
-        margin-top: 20px;
+        margin: 22px 0 18px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .prediction-card::before {
+        content: "";
+        display: block;
+        width: 72px;
+        height: 5px;
+        border-radius: 10px;
+        background: #168345;
+        margin: 0 auto 18px;
     }
 
     .prediction-label {
-        font-size: 16px;
-        color: #4b6354;
-        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 800;
+        letter-spacing: 1.8px;
+        color: #557064;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+    }
+
+    .prediction-icon {
+        font-size: 42px;
+        line-height: 1.1;
+        margin: 4px 0 8px;
     }
 
     .prediction-name {
-        font-size: 32px;
+        font-size: 30px;
+        line-height: 1.25;
         font-weight: 800;
-        color: #087432;
+        color: #086b2e;
+        margin: 0 auto 13px;
+    }
+
+    .prediction-status {
+        display: inline-block;
+        padding: 7px 14px;
+        border-radius: 999px;
+        background: #e2f6e8;
+        color: #176b38;
+        font-size: 13px;
+        font-weight: 650;
     }
 
     /* Section title */
@@ -179,7 +210,49 @@ st.markdown("""
 # MODEL SETTINGS
 # ============================================================
 
-MODEL_PATH = "best_model.keras"
+# Resolve the model relative to this main.py file so the app works
+# correctly on Streamlit Cloud/GitHub regardless of the working directory.
+BASE_DIR = Path(__file__).resolve().parent
+
+# The deployment will automatically locate a Keras model in the
+# same repository as this application. Explicit preferred names are
+# checked first, followed by any other .keras files.
+PREFERRED_MODEL_NAMES = [
+    "best_model_selected.keras",
+    "best_model.keras",
+]
+
+def find_model_file():
+    # 1. Check preferred filenames first.
+    for name in PREFERRED_MODEL_NAMES:
+        path = BASE_DIR / name
+        if path.is_file():
+            return path
+
+    # 2. Search the repository recursively for .keras files.
+    candidates = sorted(
+        [p for p in BASE_DIR.rglob("*.keras") if p.is_file()],
+        key=lambda p: (p.name.lower(), str(p).lower())
+    )
+
+    if not candidates:
+        return None
+
+    # If there is exactly one Keras model, use it automatically.
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Otherwise prefer names containing "best" or "selected".
+    preferred = [
+        p for p in candidates
+        if "best" in p.name.lower() or "selected" in p.name.lower()
+    ]
+
+    if preferred:
+        return preferred[0]
+
+    # Final fallback: first discovered .keras model.
+    return candidates[0]
 
 IMAGE_SIZE = (224, 224)
 
@@ -300,7 +373,21 @@ DISEASE_INFO = {
 @st.cache_resource
 def load_model():
 
-    model = tf.keras.models.load_model(MODEL_PATH)
+    # Use the exact model location relative to this main.py file.
+    # This avoids Streamlit Cloud working-directory issues.
+    model_path = BASE_DIR / "best_model.keras"
+
+    if not model_path.is_file():
+        raise FileNotFoundError(
+            f"Model file not found at: {model_path}. "
+            "Please ensure best_model.keras is in the same repository "
+            "folder as main.py."
+        )
+
+    model = tf.keras.models.load_model(
+        str(model_path.resolve()),
+        compile=False
+    )
 
     return model
 
@@ -341,85 +428,131 @@ def model_prediction(test_image):
     return result_index, probabilities, confidence
 
 
+
 # ============================================================
 # GRAD-CAM VISUALIZATION
 # ============================================================
-def _find_last_4d_layer(layer):
-    """Find the deepest convolutional/feature layer with a 4-D output."""
-    if isinstance(layer, tf.keras.Model):
-        for sublayer in reversed(layer.layers):
-            found = _find_last_4d_layer(sublayer)
-            if found is not None:
-                return found
 
-    try:
-        output_shape = layer.output_shape
-        if isinstance(output_shape, tuple) and len(output_shape) == 4:
+def _find_gradcam_layer(model):
+    for layer in reversed(model.layers):
+        try:
+            if len(layer.output.shape) == 4:
+                return layer
+        except Exception:
+            pass
+
+    for layer in reversed(model.layers):
+        if isinstance(
+            layer,
+            (
+                tf.keras.layers.Conv2D,
+                tf.keras.layers.SeparableConv2D,
+                tf.keras.layers.DepthwiseConv2D,
+            )
+        ):
             return layer
-        if isinstance(output_shape, list) and output_shape and len(output_shape[0]) == 4:
-            return layer
-    except Exception:
-        pass
 
     return None
 
 
-def make_gradcam(test_image, predicted_index):
-    """Generate a Grad-CAM heatmap for the predicted class."""
+def _gradcam_visualization(test_image, predicted_index):
     model = load_model()
 
-    target_layer = _find_last_4d_layer(model)
-    if target_layer is None:
-        raise RuntimeError("No suitable 4-D feature layer was found for Grad-CAM.")
+    test_image.seek(0)
+    original_image = Image.open(test_image).convert("RGB")
+    display_image = original_image.copy()
 
-    if hasattr(test_image, "seek"):
-        test_image.seek(0)
+    resized_image = original_image.resize(IMAGE_SIZE)
+    input_arr = np.asarray(resized_image).astype(np.float32)
+    input_tensor = tf.expand_dims(input_arr, axis=0)
 
-    original = Image.open(test_image).convert("RGB")
-    original_array = np.asarray(original)
+    last_conv_layer = _find_gradcam_layer(model)
 
-    resized = original.resize(IMAGE_SIZE)
-    input_array = np.asarray(resized).astype(np.float32)
-    input_array = np.expand_dims(input_array, axis=0)
+    if last_conv_layer is None:
+        raise ValueError(
+            "Grad-CAM could not find a suitable convolutional feature layer."
+        )
 
     grad_model = tf.keras.models.Model(
         inputs=model.inputs,
-        outputs=[target_layer.output, model.output]
+        outputs=[last_conv_layer.output, model.output]
     )
 
     with tf.GradientTape() as tape:
-        conv_outputs, predictions = grad_model(input_array, training=False)
+        conv_outputs, predictions = grad_model(
+            input_tensor,
+            training=False
+        )
+
+        if isinstance(predictions, (list, tuple)):
+            predictions = predictions[0]
+
         class_score = predictions[:, predicted_index]
 
     gradients = tape.gradient(class_score, conv_outputs)
-    if gradients is None:
-        raise RuntimeError("Gradients could not be calculated for Grad-CAM.")
 
-    pooled_gradients = tf.reduce_mean(gradients, axis=(1, 2))
+    if gradients is None:
+        raise ValueError("Grad-CAM gradients could not be calculated.")
+
+    pooled_gradients = tf.reduce_mean(
+        gradients,
+        axis=(1, 2)
+    )
+
     conv_outputs = conv_outputs[0]
     pooled_gradients = pooled_gradients[0]
 
-    heatmap = tf.reduce_sum(conv_outputs * pooled_gradients, axis=-1)
-    heatmap = tf.maximum(heatmap, 0)
-    max_value = tf.reduce_max(heatmap)
-    heatmap = heatmap / (max_value + tf.keras.backend.epsilon())
-    heatmap = tf.image.resize(heatmap[..., tf.newaxis],
-                              [original_array.shape[0], original_array.shape[1]])
-    heatmap = tf.squeeze(heatmap).numpy()
+    heatmap = tf.reduce_sum(
+        conv_outputs * pooled_gradients[tf.newaxis, tf.newaxis, :],
+        axis=-1
+    )
 
-    # Render the heatmap with a Matplotlib-free implementation of the
-    # standard JET colour map, then overlay it on the original image.
-    # This avoids requiring the matplotlib package on Streamlit Cloud.
-    h = np.clip(heatmap, 0.0, 1.0)
-    r = np.clip(1.5 - np.abs(4.0 * h - 3.0), 0.0, 1.0)
-    g = np.clip(1.5 - np.abs(4.0 * h - 2.0), 0.0, 1.0)
-    b = np.clip(1.5 - np.abs(4.0 * h - 1.0), 0.0, 1.0)
-    heatmap_rgb = (np.stack([r, g, b], axis=-1) * 255).astype(np.uint8)
-    overlay = (0.55 * original_array.astype(np.float32) +
-               0.45 * heatmap_rgb.astype(np.float32)).clip(0, 255).astype(np.uint8)
+    heatmap = tf.maximum(heatmap, 0)
+
+    maximum = tf.reduce_max(heatmap)
+
+    if float(maximum) > 0:
+        heatmap = heatmap / maximum
+
+    heatmap = heatmap.numpy()
+
+    heatmap_image = Image.fromarray(
+        np.uint8(heatmap * 255)
+    ).resize(
+        display_image.size,
+        Image.Resampling.BILINEAR
+    )
+
+    heatmap_colour = ImageOps.colorize(
+        heatmap_image.convert("L"),
+        black="blue",
+        white="red"
+    )
+
+    overlay = Image.blend(
+        display_image.convert("RGB"),
+        heatmap_colour.convert("RGB"),
+        0.45
+    )
+
+    test_image.seek(0)
 
     return overlay
 
+
+def _show_gradcam(test_image, predicted_index):
+    gradcam_image = _gradcam_visualization(
+        test_image,
+        predicted_index
+    )
+
+    st.markdown("### 🔥 Grad-CAM Visualization")
+
+    st.image(
+        gradcam_image,
+        caption="Grad-CAM visualization of the predicted disease",
+        use_container_width=True
+    )
 
 # ============================================================
 # SIDEBAR
@@ -724,20 +857,12 @@ elif page == "🔬 Disease Recognition":
                 # Prediction Result
                 # ------------------------------------------------
 
-                st.markdown(f"""
-                <div class="prediction-card">
-
-                    <div class="prediction-label">
-                    🌽 Model Prediction
-                    </div>
-
-                    <div class="prediction-name">
-                    {disease_info["emoji"]}
-                    {predicted_class}
-                    </div>
-
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"""<div class="prediction-card">
+<div class="prediction-label">🌽 &nbsp; MODEL PREDICTION</div>
+<div class="prediction-icon">{disease_info["emoji"]}</div>
+<div class="prediction-name">{predicted_class}</div>
+<div class="prediction-status">✓ &nbsp; Disease identified successfully</div>
+</div>""", unsafe_allow_html=True)
 
 
                 # ------------------------------------------------
@@ -754,27 +879,6 @@ elif page == "🔬 Disease Recognition":
                     "Model confidence",
                     f"{confidence:.2f}%"
                 )
-
-
-                # ------------------------------------------------
-                # Grad-CAM Visualization
-                # ------------------------------------------------
-                try:
-                    gradcam_image = make_gradcam(test_image, result_index)
-                    st.markdown("### 🔥 Grad-CAM Visualization")
-                    st.image(
-                        gradcam_image,
-                        caption=f"Grad-CAM visualization for {predicted_class}",
-                        use_container_width=True
-                    )
-                    st.caption(
-                        "Highlighted regions indicate image areas contributing most strongly to the predicted class."
-                    )
-                except Exception as gradcam_error:
-                    st.warning(
-                        "Grad-CAM visualization could not be generated for this model: "
-                        + str(gradcam_error)
-                    )
 
 
                 # ------------------------------------------------
@@ -900,6 +1004,18 @@ elif page == "🔬 Disease Recognition":
                     fig,
                     use_container_width=True
                 )
+
+                # ------------------------------------------------
+                # Grad-CAM visualization
+                # ------------------------------------------------
+
+                try:
+                    _show_gradcam(
+                        test_image,
+                        result_index
+                    )
+                except Exception:
+                    pass
 
 
                 # ------------------------------------------------
